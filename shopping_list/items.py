@@ -12,6 +12,7 @@ class ItemManager:
     def __init__(self, args: Namespace) -> None:
         self.args = args
         self.db = db_init(args.db_file)
+        self.items = set(args.item)
 
     def _list(self) -> None:
         done_status = set([False])
@@ -44,11 +45,11 @@ class ItemManager:
             self.db.create_tables(MODELS)
             command = self.args.command
             if command == "add":
-                for title in self.args.item:
+                for title in self.items:
                     logger.info("Adding {!r}", title)
                     Item.create(title=title)  # type: ignore
             elif command == "done":
-                for item_id in self.args.item:
+                for item_id in self.items:
                     logger.info("Marking {!r} as done", item_id)
                     try:
                         item = Item.get_by_id(item_id)  # type: ignore
@@ -57,7 +58,7 @@ class ItemManager:
                     except DoesNotExist:
                         logger.warning("Item {} not present", item_id)
             elif command == "rm":
-                for item_id in self.args.item:
+                for item_id in self.items:
                     logger.info("Removing {!r}", item_id)
                     try:
                         item = Item.get_by_id(item_id)  # type: ignore
