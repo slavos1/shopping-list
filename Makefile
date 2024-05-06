@@ -1,9 +1,13 @@
 HATCH=hatch
+PROJECT_NAME=$(shell ${HATCH} project metadata|jq -r '.name')
 
 all: test
 
-cli test cov help:
+test cov help:
 	${HATCH} run $@ ${EXTRA}
+
+cli:
+	${HATCH} run cli -i shop.db ${EXTRA}
 
 # XXX always run formatter first to wrap long lines
 # https://github.com/pypa/hatch/discussions/1205#discussioncomment-8087562
@@ -16,3 +20,9 @@ mypy:
 
 build:
 	${HATCH} build
+
+deploy: mypy build reinstall
+
+reinstall:
+	-pipx uninstall "${PROJECT_NAME}"
+	pipx install dist/*$$(${HATCH} version)*.whl

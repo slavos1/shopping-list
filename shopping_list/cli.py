@@ -4,9 +4,8 @@ from pathlib import Path
 from loguru import logger
 
 from . import __version__ as VERSION
+from .items import ItemManager
 from .log import setup_logging
-from .parse import parse
-from .report import report
 
 HELP_FORMATTER = ArgumentDefaultsHelpFormatter
 
@@ -26,52 +25,55 @@ def parse_args() -> Namespace:
     )
     parser.add_argument(
         "-i",
-        "--input-file",
+        "--db-file",
         help="Input file",
         type=Path,
         metavar="PATH",
-        required=True,
+        default="~/.local/state/shopping-list.db",
     )
+    parser.add_argument("-c", "--closed", action="store_true", help="Show closed items too")
 
-    commands = parser.add_subparsers(dest="command", required=True)
+    commands = parser.add_subparsers(
+        dest="command", required=False, description="If no command specified, only list items"
+    )
 
     parse_command = commands.add_parser(
-        "parse",
+        "add",
         formatter_class=HELP_FORMATTER,
-        help="Parse data",
-        description="Parse data from input",
+        help="Add item(s)",
+        description="Add item(s) to shopping list",
     )
     parse_command.add_argument(
-        "-o",
-        "--output-file",
-        help="Output file",
-        type=Path,
-        metavar="PATH",
-        required=True,
+        "item",
+        help="Item title",
+        nargs="+",
     )
 
-    report_command = commands.add_parser(
-        "report",
+    parse_command = commands.add_parser(
+        "done",
         formatter_class=HELP_FORMATTER,
-        help="Make report",
-        description="Make report from data produced by 'parse'",
+        help="Close item(s)",
+        description="Mark item(s) as done",
     )
-    report_command.add_argument(
-        "-o",
-        "--output-dir",
-        help="Output directory",
-        type=Path,
-        metavar="PATH",
-        required=True,
+    parse_command.add_argument(
+        "item",
+        help="Item ID as returned from list",
+        nargs="+",
+    )
+
+    parse_command = commands.add_parser(
+        "rm",
+        formatter_class=HELP_FORMATTER,
+        help="Delete item(s)",
+        description="Delete item(s) from shopping list",
+    )
+    parse_command.add_argument(
+        "item",
+        help="Item ID as returned from list",
+        nargs="+",
     )
 
     return parser.parse_args()
-
-
-DISPATCH = {
-    "parse": parse,
-    "report": report,
-}
 
 
 def cli() -> None:
@@ -79,4 +81,5 @@ def cli() -> None:
     setup_logging(args)
     logger.debug("args={}", args)
     # handle the args
-    DISPATCH[args.command](args)
+    manager = ItemManager(args)
+    return manager.dispatch()

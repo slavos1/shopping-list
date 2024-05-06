@@ -20,10 +20,10 @@ LOG_FILE_FORMAT = (
 
 
 def setup_logging(args: Namespace) -> None:
-    if args.quiet:
-        level = "WARNING"
-    elif args.debug:
+    if args.debug:
         level = "DEBUG"
+    elif args.quiet:
+        level = "WARNING"
     else:
         level = "INFO"
     handlers = [
