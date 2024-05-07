@@ -1,5 +1,6 @@
 from argparse import Namespace
-from typing import Callable
+from operator import itemgetter
+from typing import Any, Optional, Tuple
 
 import pytest
 
@@ -8,16 +9,29 @@ from shopping_list.models import MODELS, Item
 
 
 @pytest.fixture
-def manager(tmp_path) -> Callable:
-    def _make_manager(command, items) -> ItemManager:
+def manager(tmp_path) -> Any:
+    def _make_manager(
+        command: Optional[str] = None, items: Optional[Tuple[str]] = None
+    ) -> ItemManager:
         args = Namespace()
         args.db_file = tmp_path / "shop.db"
         args.command = command
-        args.item = items
+        if items:
+            args.item = items
         args.closed = None
         return ItemManager(args)
 
     return _make_manager
+
+
+def test_list(manager) -> None:
+    m = manager("add", ("item1", "item2", "item1"))
+    m.dispatch()
+    m = manager()
+    m.dispatch()
+    with m.db.bind_ctx(MODELS):
+        assert Item.select().count() == 2
+        assert sorted(map(itemgetter("title"), m._list())) == ["item1", "item2"]
 
 
 def test_add(manager) -> None:

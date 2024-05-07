@@ -1,5 +1,5 @@
 from argparse import Namespace
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Generator, Tuple
 
 from loguru import logger
 from peewee import DoesNotExist
@@ -12,15 +12,15 @@ class ItemManager:
     def __init__(self, args: Namespace) -> None:
         self.args = args
         self.db = db_init(args.db_file)
-        self.items = set(args.item)
+        self.items = set(getattr(args, "item", ()))
 
-    def _list(self) -> None:
+    def _list(self) -> Tuple[Dict[str, Any], ...]:
         done_status = set([False])
         if self.args.closed:
             done_status.add(True)
         logger.debug("done_status={}", done_status)
 
-        def _iter() -> Iterable[Dict[str, Any]]:
+        def _iter() -> Generator[Dict[str, Any], None, None]:
             for i in (
                 Item.select()  # type: ignore
                 .filter(Item.done.in_(done_status))
@@ -35,10 +35,7 @@ class ItemManager:
                     "updated": i.updated_at,
                 }
 
-        rows = list(_iter())
-        if rows:
-            print(tabulate(rows, headers="keys"))
-        print(f"\nShowed {len(rows)} row(s)")
+        return tuple(_iter())
 
     def dispatch(self) -> None:
         with self.db.bind_ctx(MODELS):
@@ -67,4 +64,8 @@ class ItemManager:
                         logger.warning("Item {} does not exist", item_id)
             elif command:
                 logger.warning("{!r} command not implemented yet", command)
-            self._list()
+
+            rows = self._list()
+            if rows:
+                print(tabulate(rows, headers="keys"))
+            print(f"\nShowed {len(rows)} row(s)")
